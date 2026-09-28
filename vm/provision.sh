@@ -145,16 +145,36 @@ sudo rabbitmq-plugins enable rabbitmq_management >/dev/null
 
 if ! command -v k6 >/dev/null; then
   log "Installing k6"
-  # If the keyserver is unreachable from this network, fall back to the static
-  # binary from https://github.com/grafana/k6/releases
-  sudo gpg --no-default-keyring \
-    --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
-    --keyserver hkp://keyserver.ubuntu.com:80 \
-    --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-  echo 'deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main' \
-    | sudo tee /etc/apt/sources.list.d/k6.list >/dev/null
-  sudo apt-get update -qq
-  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq k6
+  # Static binary from GitHub releases, deliberately not the apt repo: setting that
+  # up needs a gpg keyserver round trip, and minimal Ubuntu cloud images have no
+  # /root/.gnupg and no dirmngr, so it fails with "can't connect to the dirmngr".
+  # k6 is a single static binary, so there is nothing to gain from a package.
+  case "$(uname -m)" in
+    x86_64)        K6_ARCH=amd64 ;;
+    aarch64|arm64) K6_ARCH=arm64 ;;
+    *)             die "no k6 build for architecture $(uname -m)" ;;
+  esac
+
+  # Clean up any half-configured apt repo from an earlier attempt, which would
+  # otherwise break every later apt-get update.
+  sudo rm -f /etc/apt/sources.list.d/k6.list /usr/share/keyrings/k6-archive-keyring.gpg
+
+  K6_VERSION="${K6_VERSION:-$(curl -fsSL https://api.github.com/repos/grafana/k6/releases/latest \
+    | jq -r '.tag_name // empty')}"
+  if [[ -z "$K6_VERSION" ]]; then
+    die "Could not determine the latest k6 version from the GitHub API.
+     Pick a tag from https://github.com/grafana/k6/releases and re-run with:
+       K6_VERSION=v1.3.0 vm/provision.sh"
+  fi
+
+  K6_TARBALL="k6-${K6_VERSION}-linux-${K6_ARCH}.tar.gz"
+  echo "    ${K6_VERSION} (${K6_ARCH})"
+  K6_TMP="$(mktemp -d)"
+  curl -fsSL "https://github.com/grafana/k6/releases/download/${K6_VERSION}/${K6_TARBALL}" \
+    | tar xz -C "$K6_TMP" --strip-components=1 \
+    || die "Failed to download $K6_TARBALL"
+  sudo install -m 755 "$K6_TMP/k6" /usr/local/bin/k6
+  rm -rf "$K6_TMP"
 else
   log "k6 already installed"
 fi
