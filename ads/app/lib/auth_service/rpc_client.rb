@@ -9,6 +9,9 @@ module AuthService
     include RpcApi
     extend Dry::Initializer[undefined: false]
 
+    # Without a bound here a missing reply blocks the calling Puma thread forever.
+    RPC_TIMEOUT = Float(ENV.fetch('AUTH_RPC_TIMEOUT', 5))
+
     option :queue, default: -> { create_queue }
     option :reply_queue, default: -> { create_reply_queue }
     option :lock, default: -> { Mutex.new }
@@ -50,6 +53,9 @@ module AuthService
       self.correlation_id = SecureRandom.uuid
 
       @lock.synchronize do
+        # Clear the previous answer so a timed out call cannot return a stale user_id.
+        @user_id = nil
+
         @queue.publish(
           payload,
           opts.merge(
@@ -61,7 +67,15 @@ module AuthService
             reply_to: @reply_queue.name
           )
         )
-        @condition.wait(@lock)
+        @condition.wait(@lock, RPC_TIMEOUT)
+
+        if @user_id.nil?
+          ApplicationController.logger.warn(
+            'auth rpc timed out',
+            correlation_id: @correlation_id,
+            timeout: RPC_TIMEOUT
+          )
+        end
       end
     end
   end

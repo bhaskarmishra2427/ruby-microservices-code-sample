@@ -3,6 +3,10 @@
 
 Ads system from monolith to microservices architecture
 
+> **Running this fork:** see **[RUNBOOK.md](RUNBOOK.md)**. The services have been brought up
+> to Ruby 3.3 and are deployed to an Ubuntu VM with New Relic's eBPF agent under k6 load.
+> The sections below describe the original upstream sample.
+
 Getting Started
 -----------------
 

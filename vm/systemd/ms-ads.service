@@ -1,0 +1,25 @@
+[Unit]
+Description=ms-ads (Sinatra + ActiveRecord, public API)
+Documentation=file://__ROOT__/dev/README.md
+# auth and geocoder must come up first: both AMQP consumers are loaded as
+# initializers inside their own web processes, and each must be subscribed before
+# ads can issue an RPC auth call or publish a geocoding job.
+After=network-online.target postgresql.service rabbitmq-server.service ms-auth.service ms-geocoder.service
+Wants=network-online.target ms-auth.service ms-geocoder.service
+Requires=postgresql.service rabbitmq-server.service
+
+[Service]
+Type=simple
+User=__USER__
+WorkingDirectory=__ROOT__/ads
+EnvironmentFile=/etc/newrelic-ms/env
+Environment=PORT=3000
+ExecStart=__HOME__/.rbenv/shims/bundle exec puma -C config/puma.rb
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ms-ads
+
+[Install]
+WantedBy=multi-user.target

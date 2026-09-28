@@ -4,3 +4,8 @@ ms-deploy/env/*
 **/.env
 **/log/*
 !**/log/.keep
+
+# Local run state: secrets, pidfiles, service logs.
+dev/env
+dev/tmp/
+dev/log/

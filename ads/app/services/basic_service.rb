@@ -2,8 +2,11 @@
 
 module BasicService
   module ClassMethods
-    def call(*args)
-      new(*args).call
+    # Keywords must be forwarded explicitly. Under Ruby 3 a bare *args collects
+    # them into a positional Hash, which dry-initializer then ignores entirely,
+    # leaving every option unset instead of raising.
+    def call(*args, **kwargs, &block)
+      new(*args, **kwargs, &block).call
     end
   end
 
@@ -14,8 +17,8 @@ module BasicService
 
   attr_reader :errors
 
-  def initialize(*args)
-    super(*args)
+  def initialize(*args, **kwargs)
+    super(*args, **kwargs)
     @errors = []
   end
 

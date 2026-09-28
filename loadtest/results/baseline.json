@@ -1,0 +1,151 @@
+{
+    "metrics": {
+        "http_req_duration{name:create_ad}": {
+            "avg": 234.28068907977922,
+            "min": 2.904,
+            "med": 15.283999999999999,
+            "max": 60031.85,
+            "p(90)": 147.7549,
+            "p(95)": 157.95855,
+            "thresholds": {
+                "p(95)<2000": false
+            }
+        },
+        "http_req_blocked": {
+            "max": 2.257,
+            "p(90)": 0.008,
+            "p(95)": 0.011,
+            "avg": 0.006026681160136437,
+            "min": 0,
+            "med": 0.003
+        },
+        "http_req_tls_handshaking": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "http_req_connecting": {
+            "p(95)": 0,
+            "avg": 0.001240822175008647,
+            "min": 0,
+            "med": 0,
+            "max": 0.775,
+            "p(90)": 0
+        },
+        "iterations": {
+            "count": 10128,
+            "rate": 18.53875036302307
+        },
+        "data_sent": {
+            "count": 6090857,
+            "rate": 11148.980787902015
+        },
+        "vus_max": {
+            "min": 50,
+            "max": 50,
+            "value": 50
+        },
+        "http_req_sending": {
+            "avg": 0.01809249468847196,
+            "min": 0.002,
+            "med": 0.014,
+            "max": 0.821,
+            "p(90)": 0.033,
+            "p(95)": 0.043
+        },
+        "http_req_receiving": {
+            "avg": 0.12163249172389813,
+            "min": 0,
+            "med": 0.053,
+            "max": 7.354,
+            "p(90)": 0.214,
+            "p(95)": 0.413
+        },
+        "data_received": {
+            "count": 41793489,
+            "rate": 76500.6970152795
+        },
+        "http_req_duration{expected_response:true}": {
+            "max": 56897.123,
+            "p(90)": 131.68410000000003,
+            "p(95)": 147.44129999999998,
+            "avg": 58.84798155109307,
+            "min": 1.609,
+            "med": 9.5445
+        },
+        "iteration_duration": {
+            "max": 60001.631125,
+            "p(90)": 1158.5930955,
+            "p(95)": 1168.67692315,
+            "avg": 1240.5234723810242,
+            "min": 1006.141375,
+            "med": 1023.2864165000001
+        },
+        "http_req_duration": {
+            "p(95)": 147.8919,
+            "avg": 121.05403265971647,
+            "min": 1.609,
+            "med": 9.552,
+            "max": 60031.85,
+            "p(90)": 131.9904
+        },
+        "vus": {
+            "value": 0,
+            "min": 0,
+            "max": 50
+        },
+        "http_reqs": {
+            "count": 20239,
+            "rate": 37.04638315533411
+        },
+        "checks": {
+            "passes": 20214,
+            "fails": 42,
+            "value": 0.9979265402843602
+        },
+        "http_req_failed": {
+            "passes": 21,
+            "fails": 20218,
+            "thresholds": {
+                "rate<0.01": false
+            },
+            "value": 0.001037600671969959
+        },
+        "http_req_waiting": {
+            "avg": 120.91430767330426,
+            "min": 1.589,
+            "med": 9.4,
+            "max": 60031.813,
+            "p(90)": 131.86,
+            "p(95)": 147.6276
+        }
+    },
+    "setup_data": {
+        "token": "eyJhbGciOiJIUzI1NiJ9.eyJ1dWlkIjoiZjk5NWFmOTYtMmFjMC00OTlmLTgwMTEtYjIzMTg5MzVlMGFhIn0.zDaxMvc734bBoG0F8uRFQxCGvo-ujbCIKZIAzd2cfrk"
+    },
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+                "create_ad 200": {
+                    "passes": 10107,
+                    "fails": 21,
+                    "name": "create_ad 200",
+                    "path": "::create_ad 200",
+                    "id": "913988befc6eac57381a2b6be27a3e44"
+                },
+                "create_ad returned an id": {
+                    "path": "::create_ad returned an id",
+                    "id": "7e98e1c3dcbae7edacf61f7defa3c09f",
+                    "passes": 10107,
+                    "fails": 21,
+                    "name": "create_ad returned an id"
+                }
+            }
+    }
+}

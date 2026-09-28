@@ -8,9 +8,10 @@ gem 'amazing_print', '~> 1.4.0'
 
 gem 'bunny', '~> 2.19'
 gem 'dry-initializer', '~> 3.0.3'
-gem 'dry-validation', '~> 1.5.0'
+gem 'dry-validation', '~> 1.10'
 
 gem 'puma', '~> 5.5'
+gem 'rack', '~> 2.2'
 gem 'rack-contrib', '~> 2.3'
 gem 'rack-ougai', '~> 0.2.1'
 gem 'rack-request-id', '~> 0.0.4'
@@ -21,6 +22,9 @@ gem 'sinatra-contrib', '~> 2.1'
 
 gem 'config', '~> 2.2'
 gem 'i18n', '~> 1.8'
+# json 3.x removed the create_additions: keyword that Rack::JSONBodyParser
+# (rack-contrib 2.5.0) still passes, which turns every JSON body into a 400.
+gem 'json', '~> 2.7'
 gem 'jwt', '~> 2.2.1'
 gem 'pry', '~> 0.14'
 
@@ -29,7 +33,7 @@ gem 'sequel', '~> 5.32.0'
 gem 'sequel_secure_password', '~> 0.2.15'
 gem 'sequel-seed', '~> 1.1'
 
-gem 'activesupport', '~> 6.1'
+gem 'activesupport', '~> 7.1'
 
 group :test do
   gem 'database_cleaner-sequel', '~> 1.8'

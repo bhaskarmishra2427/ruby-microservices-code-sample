@@ -1,0 +1,23 @@
+[Unit]
+Description=ms-auth (Sinatra + Sequel, AMQP RPC responder on queue "auth")
+Documentation=file://__ROOT__/dev/README.md
+After=network-online.target postgresql.service rabbitmq-server.service
+Wants=network-online.target
+Requires=postgresql.service rabbitmq-server.service
+
+[Service]
+Type=simple
+User=__USER__
+WorkingDirectory=__ROOT__/auth
+EnvironmentFile=/etc/newrelic-ms/env
+Environment=PORT=4000
+ExecStart=__HOME__/.rbenv/shims/bundle exec puma -C config/puma.rb
+Restart=on-failure
+RestartSec=5
+# Ougai writes JSON to stdout in production; journald captures it.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ms-auth
+
+[Install]
+WantedBy=multi-user.target

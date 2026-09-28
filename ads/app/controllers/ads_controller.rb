@@ -8,7 +8,7 @@ class AdsController < ApplicationController
       ads = Ad.order(updated_at: :desc).page(params[:page])
       serializer = AdSerializer.new(ads, links: pagination_links(ads))
 
-      serializer.serialized_json
+      serializer.serializable_hash.to_json
     end
 
     post '/ads', allows: %i[user_id ad] do
@@ -18,7 +18,7 @@ class AdsController < ApplicationController
       )
 
       if result.success?
-        AdSerializer.new(result.ad).serialized_json
+        AdSerializer.new(result.ad).serializable_hash.to_json
       else
         error_response(result.ad, 400)
       end

@@ -5,7 +5,9 @@ db:
 pagination:
   page_size: 10
 rabbit_mq:
-  consumer_pool: 1
+  # One thread served every auth RPC call, making this the throughput ceiling of
+  # the whole system.
+  consumer_pool: 8
 logger:
   path: log/app.log
   level: info

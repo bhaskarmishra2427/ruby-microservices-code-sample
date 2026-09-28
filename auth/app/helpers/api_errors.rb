@@ -2,6 +2,11 @@
 
 require 'sinatra/extension'
 
+# ApplicationLoader globs this directory with Dir[], whose order is not
+# guaranteed, so Validations may not be loaded yet when the error handler below
+# references it at load time.
+require_relative 'validations'
+
 module ApiErrors
   extend Sinatra::Extension
 
