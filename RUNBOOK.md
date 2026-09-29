@@ -311,6 +311,147 @@ psql -U ads -h localhost -d ms-ads-production -c 'SELECT count(*), count(lat) FR
 
 ---
 
+## API reference — using the app
+
+Nine endpoints across three services. Only two are meant for a human to call; the rest
+are either internal or infrastructure.
+
+| Method | Endpoint | Auth | Purpose |
+|---|---|---|---|
+| `POST` | `:4000/api/v1/sign_up` | none | Create a user. `201` empty body, or `422`. |
+| `POST` | `:4000/api/v1/sign_in` | none | Exchange credentials for a JWT. `201 {meta:{token}}`, or `401`. |
+| `GET` | `:4000/api/v1/auth` | `Bearer <jwt>` | Resolve a token to a user. `200 {meta:{user_id}}`, or `403`. |
+| `GET` | `:3000/api/v1/ads` | **none** | List ads, 25 per page, `?page=N`. |
+| `POST` | `:3000/api/v1/ads` | `Bearer <jwt>` | Create an ad. Triggers the whole async chain. `403` on a bad token. |
+| `PUT` | `:3000/api/v1/ads/:id` | `GEOCODER_SECRET` | **Internal.** The geocoder's coordinate callback. |
+| `POST` | `:6000/api/v1/geocoder?city=X` | `GEOCODER_SECRET` | **Internal.** Synchronous geocode. `404` if the city is unknown. |
+| `GET` | `:6000/metrics` | none | Prometheus metrics, incl. `geocoding_process_time`. |
+
+Note `GET /api/v1/ads` takes no auth — reads are public in this sample. The two internal
+endpoints authenticate with the raw shared secret in an `AUTHORIZATION` header, **not** a
+`Bearer` token.
+
+### A full walkthrough
+
+```bash
+# 1. Create your own user (or skip and use a seeded one)
+curl -s -o /dev/null -w '%{http_code}\n' -X POST localhost:4000/api/v1/sign_up \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Bhaskar","email":"b@example.com","password":"hunter2pass"}'
+# -> 201
+
+# 2. Sign in for a JWT. Seeded users: tom@ / logan@ / jack@gmail.com, all qwerty123
+TOKEN=$(curl -s -X POST localhost:4000/api/v1/sign_in \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"b@example.com","password":"hunter2pass"}' | jq -r .meta.token)
+echo "$TOKEN"
+
+# 3. Prove the token resolves, talking to auth directly over HTTP
+curl -s localhost:4000/api/v1/auth -H "Authorization: Bearer $TOKEN" | jq .
+# -> {"meta":{"user_id":4}}
+
+# 4. Create an ad. This is the interesting call: ads verifies the token via an AMQP
+#    RPC to auth, then publishes a geocoding job and returns immediately.
+curl -s -X POST localhost:3000/api/v1/ads \
+  -H 'Content-Type: application/json' -H "Authorization: Bearer $TOKEN" \
+  -d '{"ad":{"title":"Flat in Kazan","description":"2 rooms","city":"Казань"}}' | jq .
+# -> lat and lon are null here; geocoding has not happened yet
+
+# 5. A moment later they are filled in, by geocoder calling back into ads over HTTP
+sleep 2
+curl -s localhost:3000/api/v1/ads | jq '.data[0]'
+# -> "lat":"55.79","lon":"49.11"
+
+# 6. Pagination
+curl -s 'localhost:3000/api/v1/ads?page=2' | jq '.links'
+```
+
+**City names must come from `geocoder/db/data/city.csv`** — they are Russian, in Cyrillic.
+All 1,093 valid names are in `loadtest/cities.json`:
+
+```bash
+jq -r '.[0:10][]' loadtest/cities.json          # sample ten
+jq -r '.[]' loadtest/cities.json | shuf -n 1    # pick a random one
+```
+
+### Watching the hops happen
+
+The most useful way to understand the system is to tail all three services while creating
+an ad. In one terminal:
+
+```bash
+journalctl -u ms-ads -u ms-auth -u ms-geocoder -f -o cat | jq -c 'select(.msg) | {svc:.service.name, msg, request_id}'
+```
+
+Create an ad in another, and you will see the chain in order — `calling rpc auth` from
+`ads`, `authenticate user` from `auth`, `sending data to geocoder via RabbitMQ` from `ads`,
+`geocoded coordinates` from `geocoder`, then `updating ad coordinates` back in `ads`. The
+`request_id` is the same across all five lines; that correlation was already in the repo
+and is what makes the async path traceable at all.
+
+Watch the queues drain in real time:
+
+```bash
+watch -n1 'sudo rabbitmqctl list_queues name messages messages_unacknowledged consumers'
+```
+
+And the geocoder's own histogram:
+
+```bash
+curl -s localhost:6000/metrics | grep geocoding_process_time_sum
+```
+
+### Exercising the services in isolation
+
+Useful when something is broken and you want to know which hop:
+
+```bash
+# geocoder alone, no queue involved. Needs the shared secret, not a Bearer token.
+SECRET=$(grep '^GEOCODER_SECRET=' dev/env | cut -d= -f2)
+curl -s -X POST "localhost:6000/api/v1/geocoder?city=Казань" -H "AUTHORIZATION: $SECRET" | jq .
+# -> {"meta":{"lat":55.7943584,"lon":49.1114975}}
+
+# an unknown city, to see the 404 the HTTP route returns
+curl -s -X POST "localhost:6000/api/v1/geocoder?city=Atlantis" -H "AUTHORIZATION: $SECRET" | jq .
+```
+
+Note the discrepancy: the synchronous HTTP route guards a missing city with a `404`, but the
+queue consumer has no such guard and crashes instead. That asymmetry is in
+[Part 8](#part-8--troubleshooting) and is why the load generator only uses real city names.
+
+### Deliberate failure cases
+
+```bash
+# bad token -> 403, raised by the Auth helper after the RPC returns nothing
+curl -s -o /dev/null -w '%{http_code}\n' -X POST localhost:3000/api/v1/ads \
+  -H 'Content-Type: application/json' -H 'Authorization: Bearer garbage' \
+  -d '{"ad":{"title":"x","description":"x","city":"Казань"}}'
+# -> 403
+
+# missing required fields -> 500, NOT a clean 400. dry-initializer raises
+# `KeyError: CreateAdService::Ad: option 'description' is required` before any
+# ActiveRecord validation runs, and nothing rescues it. The 400 path in
+# ads_controller.rb only fires for model validation failures, which missing
+# params never reach. An unfixed gap in the original sample, listed in Known gaps.
+curl -s -w ' [HTTP %{http_code}]\n' -X POST localhost:3000/api/v1/ads \
+  -H 'Content-Type: application/json' -H "Authorization: Bearer $TOKEN" \
+  -d '{"ad":{"title":"only a title"}}'
+
+# stop auth, then create an ad: the RPC times out after AUTH_RPC_TIMEOUT and returns
+# 403 rather than hanging a Puma thread forever
+sudo systemctl stop ms-auth
+time curl -s -o /dev/null -w '%{http_code}\n' -X POST localhost:3000/api/v1/ads \
+  -H 'Content-Type: application/json' -H "Authorization: Bearer $TOKEN" \
+  -d '{"ad":{"title":"x","description":"x","city":"Казань"}}'
+# -> 403 after ~5s
+sudo systemctl start ms-auth
+```
+
+That last one is worth running once: without the timeout fix this request would never
+return, and under load it would exhaust the thread pool.
+
+---
+
 ## Appendix — what changed from the original repo
 
 The upstream sample was written for Ruby 2.6.6 in 2021 and last touched 2022-01-10. Twelve

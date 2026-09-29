@@ -23,7 +23,11 @@ gem 'rack', '~> 2.2'
 gem 'rack-contrib', '~> 2.3'
 gem 'rack-ougai', '~> 0.2.1'
 gem 'rack-request-id', '~> 0.0.4'
-gem 'railties', '~> 7.1'
+# NOTE: railties is deliberately NOT declared here. Nothing depends on it and no
+# source file references Rails, but loading it defines a phantom `Rails` constant
+# with no Rails.application. The New Relic agent's framework detection then takes
+# its Rails code path and waits for a Railtie initializer that never runs, so the
+# agent never starts and this service reports no data at all.
 gem 'rake', '~> 13.0'
 gem 'require_all', '~> 3.0'
 gem 'rubocop', '~> 1.21'
@@ -31,3 +35,7 @@ gem 'sinatra', '~> 2.1'
 gem 'sinatra-activerecord', '~> 2.0'
 gem 'sinatra-contrib', '~> 2.1'
 gem 'sinatra-strong-params', '~> 0.1', require: 'sinatra/strong-params'
+
+# APM agent. Declared last so Bundler.require loads it after sinatra/bunny/etc,
+# which its dependency detection needs in order to instrument them.
+gem 'newrelic_rpm'

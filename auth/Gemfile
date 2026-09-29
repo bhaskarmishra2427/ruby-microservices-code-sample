@@ -42,3 +42,7 @@ group :test do
   gem 'rack-test', '~> 1.1'
   gem 'rspec', '~> 3.9'
 end
+
+# APM agent. Declared last so Bundler.require loads it after sinatra/bunny/etc,
+# which its dependency detection needs in order to instrument them.
+gem 'newrelic_rpm'

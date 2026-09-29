@@ -85,6 +85,8 @@ GEM
     multi_json (1.21.2)
     mustermann (2.0.2)
       ruby2_keywords (~> 0.0.1)
+    newrelic_rpm (10.9.0)
+      logger
     nio4r (2.7.5)
     oj (3.17.6)
       bigdecimal (>= 3.0)
@@ -181,6 +183,7 @@ DEPENDENCIES
   i18n (~> 1.8)
   json (~> 2.7)
   jwt (~> 2.2.1)
+  newrelic_rpm
   pg (~> 1.2)
   pry (~> 0.14)
   puma (~> 5.5)

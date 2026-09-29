@@ -60,10 +60,10 @@ module AuthService
           payload,
           opts.merge(
             app_id: 'auth',
-            headers: {
+            headers: AmqpTraceContext.inject(
               request_id: Thread.current[:request_id],
               correlation_id: @correlation_id
-            },
+            ),
             reply_to: @reply_queue.name
           )
         )

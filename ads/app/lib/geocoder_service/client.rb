@@ -27,10 +27,10 @@ module GeocoderService
         payload,
         opts.merge(
           persistent: true,
-          headers: {
+          headers: AmqpTraceContext.inject(
             app_id: ENV['APP_NAME'],
             request_id: Thread.current[:request_id]
-          }
+          )
         )
       )
     end

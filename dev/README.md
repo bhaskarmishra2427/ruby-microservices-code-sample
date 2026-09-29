@@ -156,6 +156,11 @@ with `==`. The `geocoder` queue consumer lacks the `Geocoder::NotFound` guard it
 route has. `ads`'s `consumer_channel` would pass a String where Bunny needs an Integer,
 but nothing ever calls it.
 
+`POST /api/v1/ads` with missing fields returns **500**, not 400: `dry-initializer` raises
+`KeyError: option 'description' is required` before any ActiveRecord validation runs, and
+nothing rescues it. The `error_response(..., 400)` branch in `ads_controller.rb` only fires
+for model validation failures, which missing params never reach.
+
 `ApplicationLoader#require_dir` globs with `Dir[]` and does not sort, so boot order is
 filesystem-dependent in `auth` and `geocoder`. One instance of that bit us and is fixed
 explicitly; the loader itself is still non-deterministic. Sorting the glob would make
