@@ -9,3 +9,9 @@ ms-deploy/env/*
 dev/env
 dev/tmp/
 dev/log/
+ads/Gemfile.lock
+auth/Gemfile.lock
+geocoder/Gemfile.lock
+ads/config/newrelic.yml
+auth/config/newrelic.yml
+geocoder/config/newrelic.yml
